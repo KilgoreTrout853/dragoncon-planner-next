@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="DC26">
+  <rect width="512" height="512" fill="#171A33"/>
+  <!-- inset ring keeps the wordmark clear of a maskable crop -->
+  <circle cx="256" cy="256" r="196" fill="none" stroke="#F3C64B" stroke-width="10" opacity=".45"/>
+  <text x="256" y="238" text-anchor="middle"
+        font-family="'Barlow Semi Condensed','Arial Narrow',Helvetica,Arial,sans-serif"
+        font-size="150" font-weight="700" letter-spacing="4" fill="#F3C64B">DC</text>
+  <text x="256" y="360" text-anchor="middle"
+        font-family="'Barlow Semi Condensed','Arial Narrow',Helvetica,Arial,sans-serif"
+        font-size="150" font-weight="700" letter-spacing="4" fill="#F3C64B">26</text>
+</svg>
