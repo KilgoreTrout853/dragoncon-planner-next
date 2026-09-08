@@ -1,0 +1,80 @@
+name: Deploy next
+
+# Publishes the next branch of KilgoreTrout853/dragoncon-planner as a dev
+# build, to this repository's gh-pages branch and so to
+# https://kilgoretrout853.github.io/dragoncon-planner-next/.
+#
+# The source repository is public, so this needs no credential of its own:
+# every ten minutes (and on demand) it asks where next points, and when that
+# has moved since the last deploy it checks the branch out, builds it with
+# DC_CHANNEL=next - the dev-build mark, the worker's own cache name - and
+# pushes the result. The deployed commit is recorded in deployed.txt on
+# main, which is also what keeps a scheduled workflow from being switched
+# off for inactivity.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-next
+  cancel-in-progress: false
+
+env:
+  SOURCE_REPO: KilgoreTrout853/dragoncon-planner
+  SOURCE_BRANCH: next
+  DC_CHANNEL: next
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Has next moved since the last deploy?
+        id: src
+        run: |
+          sha=$(git ls-remote "https://github.com/$SOURCE_REPO.git" "refs/heads/$SOURCE_BRANCH" | cut -c1-40)
+          last=$(cat deployed.txt 2>/dev/null || true)
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if [ -z "$sha" ]; then echo "No $SOURCE_BRANCH branch on $SOURCE_REPO."; echo "go=false" >> "$GITHUB_OUTPUT"
+          elif [ "$sha" = "$last" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then echo "Already deployed $sha."; echo "go=false" >> "$GITHUB_OUTPUT"
+          else echo "Deploying $sha (last: ${last:-none})."; echo "go=true" >> "$GITHUB_OUTPUT"; fi
+
+      - uses: actions/checkout@v4
+        if: steps.src.outputs.go == 'true'
+        with:
+          repository: KilgoreTrout853/dragoncon-planner
+          ref: next
+          path: src
+
+      - uses: actions/setup-python@v5
+        if: steps.src.outputs.go == 'true'
+        with:
+          python-version: "3.12"
+
+      - name: Build the stamped copy
+        if: steps.src.outputs.go == 'true'
+        run: cd src && python build.py --out ../site
+
+      - name: Publish to gh-pages
+        if: steps.src.outputs.go == 'true'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
+          commit_message: "next ${{ steps.src.outputs.sha }}"
+
+      - name: Record what was deployed
+        if: steps.src.outputs.go == 'true'
+        run: |
+          echo "${{ steps.src.outputs.sha }}" > deployed.txt
+          git config user.name "deploy-bot"
+          git config user.email "deploy-bot@users.noreply.github.com"
+          git add deployed.txt
+          git commit -m "Deployed next ${{ steps.src.outputs.sha }}"
+          git push
