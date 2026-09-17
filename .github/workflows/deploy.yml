@@ -51,14 +51,27 @@ jobs:
           ref: next
           path: src
 
-      - uses: actions/setup-python@v5
+      # The app is built by Vite (its DECISIONS #23); build.py is gone. Node's
+      # version and the lockfile are the checkout's own.
+      - uses: actions/setup-node@v7
         if: steps.src.outputs.go == 'true'
         with:
-          python-version: "3.12"
+          node-version-file: src/.nvmrc
+          cache: npm
+          cache-dependency-path: src/package-lock.json
 
+      - name: Install the app's dependencies
+        if: steps.src.outputs.go == 'true'
+        working-directory: src
+        run: npm ci
+
+      # DC_CHANNEL comes from the workflow's env above. No DC_BUILD, so the
+      # build id is the checkout's short sha. ../site is beside the checkout,
+      # where the publish step looks.
       - name: Build the stamped copy
         if: steps.src.outputs.go == 'true'
-        run: cd src && python build.py --out ../site
+        working-directory: src
+        run: npm run build -- --outDir ../site
 
       - name: Publish to gh-pages
         if: steps.src.outputs.go == 'true'
