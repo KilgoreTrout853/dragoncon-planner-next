@@ -27,6 +27,8 @@ env:
   SOURCE_REPO: KilgoreTrout853/dragoncon-planner
   SOURCE_BRANCH: next
   DC_CHANNEL: next
+  DC_SUPABASE_URL: ${{ vars.DC_SUPABASE_URL }}
+  DC_SUPABASE_KEY: ${{ vars.DC_SUPABASE_KEY }}
 
 jobs:
   deploy:
