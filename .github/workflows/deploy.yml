@@ -32,9 +32,9 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Has next moved since the last deploy?
         id: src
@@ -46,7 +46,7 @@ jobs:
           elif [ "$sha" = "$last" ] && [ "${{ github.event_name }}" != "workflow_dispatch" ]; then echo "Already deployed $sha."; echo "go=false" >> "$GITHUB_OUTPUT"
           else echo "Deploying $sha (last: ${last:-none})."; echo "go=true" >> "$GITHUB_OUTPUT"; fi
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.src.outputs.go == 'true'
         with:
           repository: KilgoreTrout853/dragoncon-planner
@@ -84,6 +84,8 @@ jobs:
           force_orphan: true
           commit_message: "next ${{ steps.src.outputs.sha }}"
 
+      # A run by hand with next unmoved publishes the same commit again, and
+      # deployed.txt already holds it: nothing to commit, and nothing pushed.
       - name: Record what was deployed
         if: steps.src.outputs.go == 'true'
         run: |
@@ -91,5 +93,9 @@ jobs:
           git config user.name "deploy-bot"
           git config user.email "deploy-bot@users.noreply.github.com"
           git add deployed.txt
-          git commit -m "Deployed next ${{ steps.src.outputs.sha }}"
-          git push
+          if git diff --cached --quiet; then
+            echo "deployed.txt already records ${{ steps.src.outputs.sha }}."
+          else
+            git commit -m "Deployed next ${{ steps.src.outputs.sha }}"
+            git push
+          fi
